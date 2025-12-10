@@ -1,0 +1,8 @@
+slides: !!python/tuple
+- /home/satyaprakash/WSI/
+export_dir: ./
+tile_size: 224
+n_tiles: null
+n_workers: 4
+batch_size: 8
+verbose: 0
