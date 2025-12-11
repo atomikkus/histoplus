@@ -128,6 +128,37 @@ def print_class_statistics(slide_data: SlideSegmentationData, statistics: dict =
     print("=" * 60 + "\n")
 
 
+def get_cell_type_colors() -> dict[str, tuple[int, int, int]]:
+    """
+    Get color mapping for different cell types.
+    
+    Returns:
+        Dictionary mapping cell type names to RGB color tuples (BGR format for OpenCV)
+    """
+    return {
+        "Cancer cell": (255, 0, 0),        # Blue (BGR)
+        "Eosinophils": (0, 255, 0),        # Green (BGR)
+        "Fibroblasts": (0, 0, 255),        # Red (BGR)
+        "Lymphocytes": (0, 255, 255),      # Yellow (BGR)
+        "Apoptotic Body": (255, 0, 255),   # Magenta (BGR)
+        "Neutrophils": (255, 255, 0),      # Cyan (BGR)
+        "Red blood cell": (0, 100, 0),     # Dark Green (BGR)
+        "Macrophages": (128, 0, 128),      # Purple (BGR)
+        "Epithelial": (0, 128, 255),       # Orange (BGR)
+        "Minor Stromal Cell": (128, 128, 128), # Gray (BGR)
+        "Endothelial Cell": (255, 128, 0), # Light Blue (BGR)
+        "Plasmocytes": (203, 192, 255),    # Pink (BGR)
+        "Muscle Cell": (42, 42, 165),      # Brown (BGR)
+        "Mitotic Figures": (255, 255, 255), # White (BGR)
+        # Legacy/alternate names
+        "T cell": (0, 255, 255),           # Yellow (BGR)
+        "B cell": (0, 255, 255),           # Yellow (BGR)
+        "Macrophage": (128, 0, 128),       # Purple (BGR)
+        "Neutrophil": (255, 255, 0),       # Cyan (BGR)
+        "Stromal cell": (128, 128, 128),   # Gray (BGR)
+    }
+
+
 def get_deepzoom_level_downsample(
     deepzoom: DeepZoomGenerator,
     dz_level: int,
@@ -182,18 +213,10 @@ def draw_masks_on_image(
     overview_downsample = get_level_downsample(slide, overview_level)
     
     # Color mapping for different cell types
-    cell_type_colors = {
-        "Cancer cell": (255, 0, 0),      # Red
-        "Apoptotic Body": (0, 255, 0),   # Green
-        "T cell": (0, 0, 255),           # Blue
-        "B cell": (255, 255, 0),         # Yellow
-        "Macrophage": (255, 0, 255),     # Magenta
-        "Neutrophil": (0, 255, 255),     # Cyan
-        "Stromal cell": (128, 128, 128), # Gray
-    }
+    cell_type_colors = get_cell_type_colors()
     
-    # Default color for unknown cell types
-    default_color = (255, 165, 0)  # Orange
+    # Default color for unknown cell types (BGR format)
+    default_color = (0, 165, 255)  # Orange (BGR)
     
     # Get image dimensions for bounds checking
     img_height, img_width = img.shape[:2]
@@ -256,8 +279,10 @@ def draw_masks_on_image(
         
         # Draw each mask in the tile
         for mask in tile.masks:
-            # Get color for cell type
-            color = cell_type_colors.get(mask.cell_type, default_color)
+            # Get color for cell type (in BGR format)
+            color_bgr = cell_type_colors.get(mask.cell_type, default_color)
+            # Convert BGR to RGB since the image is in RGB format
+            color_rgb = (color_bgr[2], color_bgr[1], color_bgr[0])
             
             # Convert mask coordinates from tile space to overview space
             if not mask.coordinates or len(mask.coordinates) < 3:
@@ -281,7 +306,7 @@ def draw_masks_on_image(
             
             # Draw filled polygon
             try:
-                cv2.fillPoly(overlay, [coords], color)
+                cv2.fillPoly(overlay, [coords], color_rgb)
                 masks_drawn += 1
             except Exception as e:
                 continue
@@ -362,31 +387,88 @@ def create_overview_images(
     axes[1].set_title("WSI Overview (With Cell Masks)", fontsize=14, fontweight="bold")
     axes[1].axis("off")
     
-    # Add overall title
+    # Add overall title with proper spacing
     fig.suptitle(
         f"Cell Segmentation Overview\n{svs_path.name}",
         fontsize=16,
         fontweight="bold",
+        y=0.98,  # Position at the very top
     )
     
-    # Add statistics text box
-    stats_text = f"Total Cells: {total_cells:,}\n\n"
-    stats_text += "Cell Type Distribution:\n"
-    for cell_type, stats in list(statistics.items())[:8]:  # Show top 8 classes
-        stats_text += f"  {cell_type}: {stats['percentage']:.1f}%\n"
-    if len(statistics) > 8:
-        stats_text += f"  ... and {len(statistics) - 8} more"
-    
-    # Add text box with statistics
+    # Add total cells text box
+    total_text = f"Total Cells: {total_cells:,}"
     fig.text(
-        0.02, 0.02, stats_text,
-        fontsize=9,
-        verticalalignment="bottom",
-        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.8),
+        0.02, 0.91, total_text,  # Positioned below the suptitle
+        fontsize=12,
+        fontweight="bold",
+        verticalalignment="top",
+        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.9),
         family="monospace",
     )
     
-    plt.tight_layout()
+    # Add color legend at the bottom with statistics - only show cell types that exist in the data
+    cell_type_colors = get_cell_type_colors()
+    default_color_bgr = (0, 165, 255)  # Orange for unknown types (BGR)
+    
+    # Convert BGR to RGB for matplotlib and filter to only cell types present in data
+    legend_elements = []
+    has_unknown_types = False
+    
+    for cell_type, stats in statistics.items():
+        if cell_type in cell_type_colors:
+            color_bgr = cell_type_colors[cell_type]
+        else:
+            color_bgr = default_color_bgr
+            has_unknown_types = True
+        
+        # OpenCV uses BGR, matplotlib uses RGB
+        color_rgb = (color_bgr[2] / 255.0, color_bgr[1] / 255.0, color_bgr[0] / 255.0)
+        
+        # Create label with cell type, count, and percentage
+        label = f"{cell_type}: {stats['count']:,} ({stats['percentage']:.1f}%)"
+        
+        legend_elements.append(
+            plt.Rectangle((0, 0), 1, 1, facecolor=color_rgb, edgecolor='black', linewidth=0.5, label=label)
+        )
+    
+    # Add default color for unknown types only if they exist
+    if has_unknown_types:
+        default_color_rgb = (default_color_bgr[2] / 255.0, default_color_bgr[1] / 255.0, default_color_bgr[0] / 255.0)
+        legend_elements.append(
+            plt.Rectangle((0, 0), 1, 1, facecolor=default_color_rgb, edgecolor='black', linewidth=0.5, label="Other (Unknown)")
+        )
+    
+    # Create legend at the bottom center with statistics
+    # Determine number of columns based on number of cell types
+    num_types = len(legend_elements)
+    if num_types <= 4:
+        ncol = 2
+    elif num_types <= 8:
+        ncol = 3
+    else:
+        ncol = 4
+    
+    legend = fig.legend(
+        handles=legend_elements,
+        loc='lower center',
+        ncol=ncol,
+        frameon=True,
+        fancybox=True,
+        shadow=True,
+        fontsize=8,
+        bbox_to_anchor=(0.5, 0.01),  # Position at bottom center
+        columnspacing=1.0,
+        handlelength=1.5,
+        handleheight=1.5,
+    )
+    
+    # Adjust layout to make room for both suptitle and legend
+    # Calculate bottom margin based on number of rows in legend
+    num_rows = (num_types + ncol - 1) // ncol  # Ceiling division
+    bottom_margin = 0.04 + (num_rows * 0.03)  # Dynamic margin based on rows
+    
+    # Use tight_layout with rect to reserve space for suptitle and legend
+    plt.tight_layout(rect=[0, bottom_margin, 1, 0.94])  # Leave space at top (0.94) and bottom
     
     # Save figure
     output_path = Path(output_path)
