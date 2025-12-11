@@ -1,8 +1,8 @@
 slides: !!python/tuple
-- /home/satyaprakash/WSI/MSB-00602-02-01.svs
-export_dir: wsi_output/
-batch_size: 8
+- /home/satyaprakash/WSI/TCGA-G8-6324-01Z-00-DX1.30727896-3e02-44c8-a7b2-745f70c441ed.svs
+export_dir: wsi_output
+batch_size: 12
+verbose: 1
 tile_size: 224
 n_tiles: null
 n_workers: 4
-verbose: 0
