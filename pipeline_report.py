@@ -354,8 +354,7 @@ def create_pdf_report(
         fig.patches.append(header)
         fig.text(0.5, 0.94, "Detailed Cell Type Statistics", 
                 ha='center', va='center', fontsize=18, fontweight='bold', color='white')
-        
-        # Create table
+                # Create table
         ax = fig.add_subplot(111)
         ax.axis('off')
         ax.set_position([0.05, 0.10, 0.9, 0.80])  # Leave space for header and footer
