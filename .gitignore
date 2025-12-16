@@ -143,4 +143,6 @@ dmypy.json
 *.bin
 *.ipynb
 *.json
-
+*.csv
+*.html
+*.png
