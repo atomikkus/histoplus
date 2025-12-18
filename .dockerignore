@@ -1,0 +1,39 @@
+# Data and outputs
+wsi_output/
+*.svs
+*.ndpi
+*.tiff
+*.tif
+data/
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Models/weights (if stored locally)
+*.pt
+*.pth
+*.onnx
+*.bin
+
+# Misc
+*.log
+.DS_Store
+
