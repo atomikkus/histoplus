@@ -1,5 +1,5 @@
 slides: !!python/tuple
-- /data/TCGA-GD-A2C5-01Z-00-DX1.3A81505E-5BF9-466C-938B-28909CD88193.svs
+- /data/MSB-00556-04-11.svs
 export_dir: /output
 batch_size: 12
 verbose: 1
